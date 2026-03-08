@@ -253,6 +253,37 @@ export class WhatsAppChannel implements Channel {
     }
   }
 
+  async sendMedia(jid: string, filePath: string, caption?: string): Promise<void> {
+    if (!this.connected || !this.sock) {
+      throw new Error('WhatsApp not connected');
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const buffer = fs.readFileSync(filePath);
+    const isVideo = ['.mp4', '.mov', '.avi', '.mkv'].includes(ext);
+    const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+
+    if (isVideo) {
+      await this.sock.sendMessage(jid, {
+        video: buffer,
+        caption: caption || undefined,
+        mimetype: 'video/mp4',
+      });
+    } else if (isImage) {
+      await this.sock.sendMessage(jid, {
+        image: buffer,
+        caption: caption || undefined,
+      });
+    } else {
+      await this.sock.sendMessage(jid, {
+        document: buffer,
+        mimetype: 'application/octet-stream',
+        fileName: path.basename(filePath),
+        caption: caption || undefined,
+      });
+    }
+    logger.info({ jid, filePath, type: isVideo ? 'video' : isImage ? 'image' : 'document' }, 'Media sent');
+  }
+
   isConnected(): boolean {
     return this.connected;
   }

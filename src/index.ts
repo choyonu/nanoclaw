@@ -503,6 +503,12 @@ async function main(): Promise<void> {
       if (!ch) throw new Error(`No channel for JID: ${jid}`);
       await ch.sendMessage(jid, text);
     },
+    sendMedia: async (jid, filePath, caption) => {
+      const ch = findChannel(channels, jid);
+      if (!ch) throw new Error(`No channel for JID: ${jid}`);
+      if (!('sendMedia' in ch)) throw new Error('Channel does not support media');
+      await (ch as any).sendMedia(jid, filePath, caption);
+    },
   });
   queue.setProcessMessagesFn(processGroupMessages);
   recoverPendingMessages();

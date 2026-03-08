@@ -12,6 +12,7 @@ interface DashboardDeps {
   startedAt: number;
   teamManager?: TeamManager;
   sendMessage?: (jid: string, text: string) => Promise<void>;
+  sendMedia?: (jid: string, filePath: string, caption?: string) => Promise<void>;
 }
 
 function formatUptime(ms: number): string {
@@ -335,6 +336,34 @@ export function startDashboard(deps: DashboardDeps): void {
         } catch (err: any) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message || 'Send failed' }));
+        }
+      });
+      return;
+    }
+
+    // POST /api/send-media — send a media file via WhatsApp
+    if (req.method === 'POST' && url.pathname === '/api/send-media') {
+      if (!deps.sendMedia) {
+        res.writeHead(501, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'sendMedia not configured' }));
+        return;
+      }
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const { jid, filePath, caption } = JSON.parse(body);
+          if (!jid || !filePath) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'jid and filePath are required' }));
+            return;
+          }
+          await deps.sendMedia!(jid, filePath, caption);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (err: any) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message || 'Send media failed' }));
         }
       });
       return;
